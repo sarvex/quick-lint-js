@@ -346,6 +346,18 @@ std::string summarize(std::optional<expression*> expression) {
     return "(null)";
   }
 }
+
+test_parser test_parse_and_visit_statement(string8_view input, diagnostic_assertion diag0) {
+  test_parser p(input, capture_diags);
+  p.parse_and_visit_statement();
+  EXPECT_THAT(p.errors,
+              ::testing::ElementsAreArray({
+                  DIAG_TYPE_OFFSETS(p.code, diag_missing_body_for_class,  //
+                                    class_keyword_and_name_and_heritage,
+                                    strlen(u8"class C"), u8""_sv),
+              }));
+  return p;
+}
 }
 
 // quick-lint-js finds bugs in JavaScript programs.

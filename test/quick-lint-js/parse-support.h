@@ -14,6 +14,7 @@
 #include <quick-lint-js/container/padded-string.h>
 #include <quick-lint-js/diag-collector.h>
 #include <quick-lint-js/diag-matcher.h>
+#include <quick-lint-js/diagnostic-assertion.h>
 #include <quick-lint-js/dirty-set.h>
 #include <quick-lint-js/failing-diag-reporter.h>
 #include <quick-lint-js/fe/null-visitor.h>
@@ -169,6 +170,8 @@ class test_parser {
   std::vector<diag_collector::diag>& errors = this->errors_.errors;
   padded_string_view code = padded_string_view(&this->code_);
 };
+
+test_parser test_parse_and_visit_statement(string8_view input, diagnostic_assertion);
 
 // TODO(strager): Delete.
 class test_parse_expression : public ::testing::Test {};

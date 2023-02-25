@@ -81,19 +81,14 @@ TEST_F(test_parse_class, parse_class_statement) {
 
 TEST_F(test_parse_class, class_statement_requires_a_name) {
   {
-    test_parser p(u8"class {}"_sv, capture_diags);
-    p.parse_and_visit_statement();
+    test_parser p = test_parse_and_visit_statement(
+        u8"class {}"_sv,  //
+        u8"^^^^^ missing_name_in_class_statement"_diag);
     EXPECT_THAT(p.visits, ElementsAreArray({
                               "visit_enter_class_scope",       //
                               "visit_enter_class_scope_body",  //
                               "visit_exit_class_scope",
                           }));
-    EXPECT_THAT(
-        p.errors,
-        ElementsAreArray({
-            DIAG_TYPE_OFFSETS(p.code, diag_missing_name_in_class_statement,  //
-                              class_keyword, 0, u8"class"_sv),
-        }));
   }
 }
 
