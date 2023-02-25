@@ -9,6 +9,7 @@ quick_lint_js_add_executable(
   quick-lint-js-test
   diag-collector.cpp
   diag-matcher.cpp
+  diagnostic-assertion.cpp
   failing-diag-reporter.cpp
   fake-configuration-filesystem.cpp
   filesystem-test.cpp
@@ -18,6 +19,7 @@ quick_lint_js_add_executable(
   quick-lint-js/characters.h
   quick-lint-js/diag-collector.h
   quick-lint-js/diag-matcher.h
+  quick-lint-js/diagnostic-assertion.h
   quick-lint-js/dirty-set.h
   quick-lint-js/failing-diag-reporter.h
   quick-lint-js/file-matcher.h
@@ -53,6 +55,7 @@ quick_lint_js_add_executable(
   test-diag-code-list.cpp
   test-diag-code.cpp
   test-diag-matcher.cpp
+  test-diagnostic-assertion.cpp
   test-diagnostic-formatter.cpp
   test-diagnostic.cpp
   test-dirty-set.cpp
