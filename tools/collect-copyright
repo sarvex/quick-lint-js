@@ -435,7 +435,7 @@ The following files are statically linked into quick-lint-js. Their copyright an
     installed_packages = system_package_manager.packages_for_installed_files(
         linked_system_archives
     )
-    source_package_names = set(p.source for p in installed_packages)
+    source_package_names = {p.source for p in installed_packages}
 
     for source_package_name in sorted(source_package_names):
         print(f"## {source_package_name}\n")
@@ -457,7 +457,7 @@ The following files are statically linked into quick-lint-js. Their copyright an
             for source_uri in sorted(set(source_uris)):
                 print(f"* {source_uri}")
         else:
-            print(f"* (location unknown!)")
+            print("* (location unknown!)")
 
         for p in relevant_installed_packages:
             print(f"\nCopyright information for {p.name}:")
@@ -625,9 +625,7 @@ class LLVMMinGW:
         license_files = {path: path.read_text() for path in package.license_paths}
         result_lines = []
         for (license_path, license) in license_files.items():
-            result_lines.append(f"Contents of {license_path.name}:")
-            result_lines.append(license)
-            result_lines.append("")
+            result_lines.extend((f"Contents of {license_path.name}:", license, ""))
         return "\n".join(result_lines)
 
 
@@ -657,8 +655,7 @@ class Pacman:
     ) -> typing.List[InstalledPackage]:
         files = list(files)
         package_names = self._packages_for_installed_files(files)
-        packages = self._get_installed_packages(list(set(package_names)))
-        return packages
+        return self._get_installed_packages(list(set(package_names)))
 
     def _packages_for_installed_files(
         self,
@@ -723,11 +720,10 @@ class Pacman:
         for line in process.stdout.splitlines():
             match = re.match(r"^(?P<key>[^:]+?)\s*:\s*(?P<value>.*)$", line)
             if match is not None:
-                key = match.group("key")
-                value = match.group("value")
-                if key == "Name":
-                    if current_package_properties:
-                        finish_package()
+                key = match["key"]
+                value = match["value"]
+                if key == "Name" and current_package_properties:
+                    finish_package()
                 current_package_properties[key] = value
         finish_package()
         return packages
@@ -763,19 +759,17 @@ class Pacman:
             return package.licenses
         result_lines = []
         for (license_path, license) in license_files.items():
-            result_lines.append(f"Contents of {license_path.name}:")
-            result_lines.append(license)
-            result_lines.append("")
+            result_lines.extend((f"Contents of {license_path.name}:", license, ""))
         return "\n".join(result_lines)
 
     def _read_license_files(
         self, package_files: typing.Iterable[pathlib.Path]
     ) -> typing.Mapping[pathlib.Path, str]:
-        license_files = {}
-        for path in package_files:
-            if "COPYING" in path.name:
-                license_files[path] = path.read_text()
-        return license_files
+        return {
+            path: path.read_text()
+            for path in package_files
+            if "COPYING" in path.name
+        }
 
 
 def is_path_relative(root_path: str, sub_path: typing.Union[str, pathlib.Path]) -> bool:
@@ -831,8 +825,8 @@ class Debian:
         for line in process.stdout.splitlines():
             match = re.match(f"^(?P<package>\S+): (?P<file>.*)$", line)
             if match is not None:
-                file = match.group("file")
-                package_name = match.group("package")
+                file = match["file"]
+                package_name = match["package"]
                 packages.append(package_name)
                 logger.debug("dpkg %s contains file %s", package_name, file)
         return packages
@@ -890,7 +884,7 @@ class Debian:
         for line in raw.splitlines():
             match = re.match(r"^'(?P<uri>.*)' .*$", line)
             if match is not None:
-                source_uris.append(match.group("uri"))
+                source_uris.append(match["uri"])
         return source_uris
 
 
@@ -944,7 +938,7 @@ class FreeBSD:
             "/usr/lib/libc++.a": "libc++",
             "/usr/lib/libgcc_eh.a": "libunwind",
         }
-        matched_freebsd_llvm_files = set(f for f in files if f in freebsd_llvm_files)
+        matched_freebsd_llvm_files = {f for f in files if f in freebsd_llvm_files}
         if matched_freebsd_llvm_files:
             get_freebsd_info()
             clang_version_info = parse_clang_version(
@@ -1046,8 +1040,7 @@ class Emscripten:
             for file in files
             if pathlib.Path(file).name in archive_to_source_package
         ]
-        unknown_files = sorted(set(files) - set(known_files))
-        if unknown_files:
+        if unknown_files := sorted(set(files) - set(known_files)):
             warn(
                 f"files not recognized to be part of emscripten: {' '.join(unknown_files)}"
             )
@@ -1118,12 +1111,11 @@ class RedHat:
         self, files: typing.Iterable[str]
     ) -> typing.List[InstalledPackage]:
         package_names = [self._rpm_package_for_installed_file(f) for f in files]
-        packages = [
+        return [
             self._get_rpm_package(name)
             for name in set(package_names)
             if name is not None
         ]
-        return packages
 
     def get_copyright(self, package: InstalledPackage) -> str:
         error = None
@@ -1189,10 +1181,11 @@ def parse_text_link_map(raw_link_map: str) -> LinkMap:
     state = "NONE"
     for line in raw_link_map.splitlines():
         if line == "":
-            if state == "BEFORE_ELF_ARCHIVE_MEMBERS":
-                state = "ELF_ARCHIVE_MEMBERS"
-            else:
-                state = "NONE"
+            state = (
+                "ELF_ARCHIVE_MEMBERS"
+                if state == "BEFORE_ELF_ARCHIVE_MEMBERS"
+                else "NONE"
+            )
         elif line in (
             "Archive member included to satisfy reference by file (symbol)",
             "Archive member included because of file (symbol)",
@@ -1200,50 +1193,49 @@ def parse_text_link_map(raw_link_map: str) -> LinkMap:
             state = "BEFORE_ELF_ARCHIVE_MEMBERS"
         elif line == "# Object files:":
             state = "MACHO_OBJECT_FILES"
-        else:
-            if state == "ELF_ARCHIVE_MEMBERS":
-                match = re.compile(
-                    r"""
+        elif state == "ELF_ARCHIVE_MEMBERS":
+            match = re.compile(
+                r"""
                         ^
                         (?P<file>\S[^()]*?)     # File
                         (?:\([^()]*\))?         # Optional symbol after file
                         (?:\s+\S+\s\([^()]*\))? # Optional reason (file-symbol pair)
                         $
                     """,
-                    re.VERBOSE,
-                ).match(line)
-                if match is not None:
-                    linked_archives.add(match.group("file"))
-            elif state == "MACHO_OBJECT_FILES":
-                match = re.match(r"^\[[0-9 ]+\] (?P<file>.*)\((?P<object>.*)\)$", line)
-                if match is not None:
-                    linked_archives.add(match.group("file"))
-            elif state == "NONE":
-                match = re.match(
-                    r"^\s*(?P<address>[0-9a-f]+:[0-9a-f]+)\s+(?P<symbol>.*)\s+(?P<value>[0-9a-f]+)\s+[f ]\s+[i ]\s+(?P<archive>.*):(?P<file>.*)$",
-                    line,
-                )
-                if match is not None:
-                    linked_archives.add(match.group("archive") + ".lib")
-                match = re.match(
-                    r"^(?P<archive>\S+\.a)\((?P<member>[^/]+\.o)\)$",
-                    line,
-                )
-                if match is not None:
-                    linked_archives.add(match.group("archive"))
-                match = re.match(
-                    r"^\s*\d+\s+\d+\s+\d+\s+(?P<archive>\S+\.a)\((?P<member>[^/]+\.o)\):\((?P<symbol>.*)\)$",
-                    line,
-                )
-                if match is not None:
-                    linked_archives.add(pathlib.Path(match.group("archive")).name)
-                # ELF LLD style:
-                match = re.match(
-                    r"^\s*[0-9a-f]+\s+[0-9a-f]+\s+[0-9a-f]+\s+[0-9a-f]+\s+(?P<archive>\S+\.a)\((?P<member>[^/]+\.o)\):\((?P<symbol>.*)\)$",
-                    line,
-                )
-                if match is not None:
-                    linked_archives.add(match.group("archive"))
+                re.VERBOSE,
+            ).match(line)
+            if match is not None:
+                linked_archives.add(match["file"])
+        elif state == "MACHO_OBJECT_FILES":
+            match = re.match(r"^\[[0-9 ]+\] (?P<file>.*)\((?P<object>.*)\)$", line)
+            if match is not None:
+                linked_archives.add(match["file"])
+        elif state == "NONE":
+            match = re.match(
+                r"^\s*(?P<address>[0-9a-f]+:[0-9a-f]+)\s+(?P<symbol>.*)\s+(?P<value>[0-9a-f]+)\s+[f ]\s+[i ]\s+(?P<archive>.*):(?P<file>.*)$",
+                line,
+            )
+            if match is not None:
+                linked_archives.add(match["archive"] + ".lib")
+            match = re.match(
+                r"^(?P<archive>\S+\.a)\((?P<member>[^/]+\.o)\)$",
+                line,
+            )
+            if match is not None:
+                linked_archives.add(match["archive"])
+            match = re.match(
+                r"^\s*\d+\s+\d+\s+\d+\s+(?P<archive>\S+\.a)\((?P<member>[^/]+\.o)\):\((?P<symbol>.*)\)$",
+                line,
+            )
+            if match is not None:
+                linked_archives.add(pathlib.Path(match["archive"]).name)
+            # ELF LLD style:
+            match = re.match(
+                r"^\s*[0-9a-f]+\s+[0-9a-f]+\s+[0-9a-f]+\s+[0-9a-f]+\s+(?P<archive>\S+\.a)\((?P<member>[^/]+\.o)\):\((?P<symbol>.*)\)$",
+                line,
+            )
+            if match is not None:
+                linked_archives.add(match["archive"])
     return LinkMap(linked_archives=linked_archives)
 
 
@@ -1293,14 +1285,14 @@ def parse_vendor_readme_txt(
         if match is not None:
             projects.append(
                 VendorReadmeProject(
-                    project_name=match.group("project_name"),
+                    project_name=match["project_name"],
                     vendor_directory=vendor_directory,
                     properties={},
                 )
             )
         match = re.match(r"^(?P<key>[^:]+): (?P<value>.*)$", line)
         if match is not None and projects:
-            projects[-1].properties[match.group("key")] = match.group("value")
+            projects[-1].properties[match["key"]] = match["value"]
     return projects
 
 
@@ -1669,9 +1661,9 @@ def parse_clang_version(clang_version_output: str) -> ClangVersion:
     )
     if match is not None:
         return ClangVersion(
-            version=match.group("version"),
-            vcs_uri=match.group("vcs_uri"),
-            vcs_tag=match.group("vcs_tag"),
+            version=match["version"],
+            vcs_uri=match["vcs_uri"],
+            vcs_tag=match["vcs_tag"],
         )
     raise ValueError(
         "failed to parse version information from 'clang --version' output"

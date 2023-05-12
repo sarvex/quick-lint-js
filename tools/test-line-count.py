@@ -54,16 +54,14 @@ def parse_tests(source_code: str) -> typing.List[ParsedTest]:
         re.DOTALL | re.MULTILINE | re.VERBOSE,
     )
 
-    tests = []
-    for match in re.finditer(pattern, source_code):
-        tests.append(
-            ParsedTest(
-                suite=match.group("test_suite"),
-                name=match.group("test_name"),
-                body=match.group("body"),
-            )
+    return [
+        ParsedTest(
+            suite=match.group("test_suite"),
+            name=match.group("test_name"),
+            body=match.group("body"),
         )
-    return tests
+        for match in re.finditer(pattern, source_code)
+    ]
 
 
 def test() -> None:

@@ -50,7 +50,7 @@ def parse_readme_files(paths: typing.List[str]) -> typing.Dict[str, str]:
         for line in readme_text.splitlines():
             match = re.match(r"^(?P<key>\S+): (?P<value>.*)$", line)
             if match is not None:
-                result[match.group("key")] = match.group("value")
+                result[match["key"]] = match["value"]
     return result
 
 
@@ -65,10 +65,9 @@ def classify_path(path: typing.Union[pathlib.Path, pathlib.PureWindowsPath]):
         ".wasm": LLVMSizeRecorder,
         ".zip": ZIPFileRecorder,
     }
-    if path.suffix == "":
-        if path.name == "quick-lint-js":
-            # ELF and Mach-O binaries.
-            return LLVMSizeRecorder
+    if path.suffix == "" and path.name == "quick-lint-js":
+        # ELF and Mach-O binaries.
+        return LLVMSizeRecorder
     if path.suffixes[-2:] in (".tar.gz", ".tar.xz"):
         return TarFileRecorder
     return file_type_by_extension.get(path.suffix)
@@ -196,7 +195,7 @@ class LLVMSizeRecorder(Recorder):
                 r"^(?P<section>\S+)\s+(?P<size>\d+)\s+(?P<address>\d+)$", line
             )
             if match is not None:
-                sizes.append((match.group("section"), int(match.group("size"))))
+                sizes.append((match["section"], int(match["size"])))
         return sizes
 
     def is_npm_package_dummy_file(self):

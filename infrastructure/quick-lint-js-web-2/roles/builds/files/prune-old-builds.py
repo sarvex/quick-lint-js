@@ -39,7 +39,7 @@ def get_commits(repo_name: str, repository_url: str) -> list:
 
 
 def has_valid_name(folder_name: str) -> bool:
-    return not re.match(r'^[a-f0-9]{40}$', folder_name) == None
+    return re.match(r'^[a-f0-9]{40}$', folder_name) is not None
 
 
 if __name__ == '__main__':
@@ -79,7 +79,11 @@ if __name__ == '__main__':
         folder_path = builds_path / folder
         created_at = datetime.fromtimestamp(os.path.getctime(folder_path))
 
-        if not folder in commits and has_valid_name(folder) and how_old(created_at) > FOURTEEN_DAYS:
+        if (
+            folder not in commits
+            and has_valid_name(folder)
+            and how_old(created_at) > FOURTEEN_DAYS
+        ):
             error_print(
                 f"""Build \033[93m{folder}\033[0m accomplish the following criteria:\n* Is not part of the repo/PR\n* Has more then fourteen days\n\033[1;31mThis build will be deleted.\033[0m\n""")
 

@@ -69,11 +69,11 @@ def get_exe_sizes(directory: pathlib.Path) -> typing.Mapping[str, int]:
         path=directory,
     ).record(sizes=sizes)
 
-    exe_sizes = {}
-    for entry in sizes.to_json_like():
-        if entry["type"] == "exe":
-            exe_sizes[tidy_exe_name(entry["name"])] = entry["size"]
-    return exe_sizes
+    return {
+        tidy_exe_name(entry["name"]): entry["size"]
+        for entry in sizes.to_json_like()
+        if entry["type"] == "exe"
+    }
 
 
 def tidy_exe_name(full_name: typing.Tuple[str, ...]) -> str:

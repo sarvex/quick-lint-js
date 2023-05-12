@@ -48,13 +48,12 @@ error_code_versions: typing.Mapping[
 for version in sorted(all_versions):
     for error_code in get_error_codes_in_version(version):
         if len(error_code) == 4:
-            error_code = error_code[0] + "0" + error_code[1:]
+            error_code = f"{error_code[0]}0{error_code[1:]}"
         error_code_versions[error_code].append(version)
 
 for p in pathlib.Path("docs/errors").glob("*.md"):
     error_code = p.name.replace(".md", "")
-    versions = error_code_versions[error_code]
-    if versions:
+    if versions := error_code_versions[error_code]:
         introduced_version = versions[0]
 
         md = p.read_text()
